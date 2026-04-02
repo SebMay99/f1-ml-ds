@@ -4,59 +4,53 @@ import pandas as pd
 # Activate local cache
 fastf1.Cache.enable_cache('./etl/cache/') # Avoid downloading the same data multiple times
 
+def load_session_results(year: int, session_type: str) -> pd.DataFrame:
+    """Fetches results for a given year and session type and returns a DataFrame."""
+    
+    schedule = fastf1.get_event_schedule(year, include_testing=False)
+    for round_num in range(1, len(schedule) + 1):
+        try:
+            session = fastf1.get_session(year, round_num, session_type)
+            session.load()
+
+            yield round_num, session
+
+        except Exception as e:
+            print(f"Could not load round {round_num}, year {year}, session {session_type}: {e}")
+            continue
+
 def fetch_race_results(year: int) -> pd.DataFrame:
     """Fetches race results for a given year and returns a DataFrame."""
 
-    # Get the number of rounds in the season
-    schedule = fastf1.get_event_schedule(year, include_testing=False)
-    total_rounds = len(schedule)
-
-    # Initialize an empty DataFrame to store results for the entire year
-    year_sessions_pd = pd.DataFrame()
+    all_results = pd.DataFrame()
 
     # Loop through each round and fetch the race results
-    for round in range(1,total_rounds + 1):  
-        try:
-            session = fastf1.get_session(year, round, 'R')
-            session.load()
+    for round_num, session in load_session_results(year, 'R'):  
+        results = session.results[['DriverNumber','Abbreviation','FullName','TeamName','GridPosition','Position','Status']].copy()
+        results['year'] = year
+        results['round_number'] = round_num
+        results['circuit'] = session.event['Location']
 
-            results = session.results[['DriverNumber','Abbreviation','FullName','TeamName','GridPosition','Position','Status']].copy()
-            results['year'] = year
-            results['round_number'] = round
-            results['circuit'] = session.event['Location']
+        all_results = pd.concat([all_results, results], ignore_index=True)
 
-            year_sessions_pd = pd.concat([year_sessions_pd, results], ignore_index=True)
-
-        except Exception as e:
-            print(f"Could not load round {round}, year {year}: {e}")
-            continue
-    return year_sessions_pd
+    return all_results
 
 def fetch_qualifying_results(year: int) -> pd.DataFrame:
     """Fetches qualifying results for a given year and returns a DataFrame."""
 
-    # Get the number of rounds in the season
-    schedule = fastf1.get_event_schedule(year, include_testing=False)
-    total_rounds = len(schedule)
+    all_results = pd.DataFrame()
 
-    # Initialize an empty DataFrame to store results for the entire year
-    year_sessions_pd = pd.DataFrame()
+    # Loop through each round and fetch the race results
+    for round_num, session in load_session_results(year, 'Q'):  
+        results = session.results[['DriverNumber', 'Abbreviation', 'Q1', 'Q2', 'Q3', 'Position']].copy()
+        results = results.rename(columns={'Position': 'QualyPosition'})
+        results['year'] = year
+        results['round_number'] = round_num
+        results['circuit'] = session.event['Location']
 
-    # Loop through each round and fetch the qualifying results
-    for round in range(1,total_rounds + 1):  
-        try:
-            session = fastf1.get_session(year, round, 'Q')
-            session.load()
+        all_results = pd.concat([all_results, results], ignore_index=True)
 
-            results = session.results[['DriverNumber', 'Abbreviation', 'Q1', 'Q2', 'Q3', 'Position']].copy()
-            results = results.rename(columns={'Position': 'QualyPosition'})
-            results['year'] = year
-            results['round_number'] = round
-            results['circuit'] = session.event['Location']
+    return all_results
 
-            year_sessions_pd = pd.concat([year_sessions_pd, results], ignore_index=True)
-
-        except Exception as e:
-            print(f"Could not load round {round}, year {year}: {e}")
-            continue
-    return year_sessions_pd
+print(fetch_race_results(2023).head())
+print(fetch_qualifying_results(2023).head())
