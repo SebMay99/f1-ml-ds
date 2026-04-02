@@ -1,0 +1,6 @@
+fastf1
+requests
+pandas
+sqlalchemy
+openmeteo-requests
+retry-requests
