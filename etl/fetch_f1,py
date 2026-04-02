@@ -1,12 +1,15 @@
 import fastf1
 import pandas as pd
+from typing import Generator
+
+import fastf1.core
 
 # Activate local cache
 fastf1.Cache.enable_cache('./etl/cache/') # Avoid downloading the same data multiple times
 
-def load_session_results(year: int, session_type: str) -> pd.DataFrame:
-    """Fetches results for a given year and session type and returns a DataFrame."""
-    
+def load_session_results(year: int, session_type: str) -> Generator[tuple[int, fastf1.core.Session], None, None]:
+    """Yields (round_number, session) pairs for a given year and session type."""
+
     schedule = fastf1.get_event_schedule(year, include_testing=False)
     for round_num in range(1, len(schedule) + 1):
         try:
@@ -22,35 +25,31 @@ def load_session_results(year: int, session_type: str) -> pd.DataFrame:
 def fetch_race_results(year: int) -> pd.DataFrame:
     """Fetches race results for a given year and returns a DataFrame."""
 
-    all_results = pd.DataFrame()
+    frames = []
 
-    # Loop through each round and fetch the race results
-    for round_num, session in load_session_results(year, 'R'):  
+    for round_num, session in load_session_results(year, 'R'):
         results = session.results[['DriverNumber','Abbreviation','FullName','TeamName','GridPosition','Position','Status']].copy()
         results['year'] = year
         results['round_number'] = round_num
         results['circuit'] = session.event['Location']
+        frames.append(results)
 
-        all_results = pd.concat([all_results, results], ignore_index=True)
-
-    return all_results
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 def fetch_qualifying_results(year: int) -> pd.DataFrame:
     """Fetches qualifying results for a given year and returns a DataFrame."""
 
-    all_results = pd.DataFrame()
+    frames = []
 
-    # Loop through each round and fetch the race results
-    for round_num, session in load_session_results(year, 'Q'):  
+    for round_num, session in load_session_results(year, 'Q'):
         results = session.results[['DriverNumber', 'Abbreviation', 'Q1', 'Q2', 'Q3', 'Position']].copy()
         results = results.rename(columns={'Position': 'QualyPosition'})
         results['year'] = year
         results['round_number'] = round_num
         results['circuit'] = session.event['Location']
+        frames.append(results)
 
-        all_results = pd.concat([all_results, results], ignore_index=True)
-
-    return all_results
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 print(fetch_race_results(2023).head())
 print(fetch_qualifying_results(2023).head())
