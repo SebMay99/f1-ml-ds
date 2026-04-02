@@ -1,16 +1,35 @@
 import fastf1
+import pandas as pd
 
 # Activate local cache
-fastf1.Cache.enable_cache('./cache/') # Avoid downloading the same data multiple times
+fastf1.Cache.enable_cache('./etl/cache/') # Avoid downloading the same data multiple times
 
-# Load a session
-session = fastf1.get_session(2023, 'Bahrain', 'R')
-session.load() 
+def fetch_race_results(year: int) -> pd.DataFrame:
+    """Fetches race results for a given year and returns a DataFrame."""
 
-# Show results
-session.results
+    # Get the number of rounds in the season
+    schedule = fastf1.get_event_schedule(year, include_testing=False)
+    total_rounds = len(schedule)
 
+    # Initialize an empty DataFrame to store results for the entire year
+    year_sessions_pd = pd.DataFrame()
 
+    # Loop through each round and fetch the race results
+    for round in range(1,total_rounds + 1):  
+        try:
+            session = fastf1.get_session(year, round, 'R')
+            session.load()
 
+            results = session.results[['DriverNumber','Abbreviation','FullName','TeamName','GridPosition','Position','Status']].copy()
+            results['year'] = year
+            results['round_number'] = round
+            results['circuit'] = session.event['Location']
 
+            year_sessions_pd = pd.concat([year_sessions_pd, results], ignore_index=True)
 
+        except Exception as e:
+            print(f"Could not load round {round}, year {year}: {e}")
+            continue
+    return year_sessions_pd
+
+print(fetch_race_results(2023)) 
