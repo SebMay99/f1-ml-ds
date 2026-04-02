@@ -37,3 +37,9 @@ Desktop.ini
 .idea/
 *.iws
 out/
+
+# FastF1 cache
+etl/cache/
+
+# Track empty cache directory with a .gitkeep file
+!etl/cache/.gitkeep
