@@ -1,6 +1,5 @@
-fastf1
-requests
-pandas
-sqlalchemy
-openmeteo-requests
-retry-requests
+fastf1==3.8.2
+pandas==2.3.3
+sqlalchemy==2.0.48
+openmeteo-requests==1.7.5
+retry-requests==2.0.0
