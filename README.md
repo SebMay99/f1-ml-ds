@@ -1,4 +1,4 @@
-# F1 ML/DS — Race Prediction & Analysis
+# F1 Podium Predictor
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastF1](https://img.shields.io/badge/FastF1-3.x-E10600?logo=f1&logoColor=white)
@@ -7,42 +7,68 @@
 ![Status](https://img.shields.io/badge/Status-In%20Progress-yellow)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-End-to-end data pipeline and machine learning project built on top of the official Formula 1 timing data. The goal is to predict race outcomes and analyze performance trends across seasons using real telemetry, results, and weather data.
+End-to-end machine learning project that predicts Formula 1 race podiums. Built on real F1 timing data and race-day weather, with a full pipeline from ETL to a React frontend served by a FastAPI backend.
 
 ---
 
-## Features
-
-- **ETL pipeline** — fetches race results, qualifying times, and session telemetry via FastF1
-- **Weather integration** — pulls historical race-day weather from Open-Meteo
-- **Local caching** — avoids redundant API calls with FastF1's built-in cache layer
-- **Structured storage** — persists cleaned data to a relational database via SQLAlchemy
-- **ML models** _(coming soon)_ — race position prediction, tire strategy analysis, qualifying pace modeling
-
----
-
-## Project Structure
+## Architecture
 
 ```
-f1-ml-ds/
+f1-podium-predictor/
+│
+├── data/
+│   ├── raw/                    # Cached API responses
+│   └── processed/              # Cleaned, feature-ready data
+│
+├── notebooks/
+│   ├── 01_eda.ipynb
+│   ├── 02_feature_engineering.ipynb
+│   └── 03_model_training.ipynb
+│
 ├── etl/
-│   ├── fetch_f1,py        # FastF1 data ingestion (race & qualifying results)
-│   └── cache/             # FastF1 local cache (git-ignored)
+│   ├── fetch_f1.py             ✅ F1 results & qualifying via FastF1
+│   ├── fetch_weather.py        ✅ Race-day weather via Open-Meteo
+│   └── pipeline.py             ← in progress
+│
+├── ml/
+│   ├── features.py
+│   ├── train.py
+│   └── predict.py
+│
+├── api/
+│   ├── main.py
+│   └── routes/
+│
+├── frontend/
+│
+├── models/
 ├── requirements.txt
-└── README.md
+├── README.md
+└── docker-compose.yml
 ```
+
+---
+
+## Sprints
+
+| # | Goal | Status |
+|---|------|--------|
+| 1 | ETL — F1 results + weather into SQLite | In progress |
+| 2 | Feature engineering + XGBoost baseline | Pending |
+| 3 | Evaluation, neural network, model serialization | Pending |
+| 4 | FastAPI with `/predict` endpoint | Pending |
+| 5 | React frontend — race selector → predicted podium | Pending |
+| 6 | Deploy on Railway + final README + LinkedIn post | Pending |
 
 ---
 
 ## Setup
 
 ```bash
-# 1. Create and activate a virtual environment
 python -m venv venv
 .\venv\Scripts\activate       # Windows
 source venv/bin/activate      # macOS / Linux
 
-# 2. Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -52,15 +78,14 @@ pip install -r requirements.txt
 
 ```python
 from etl.fetch_f1 import fetch_race_results, fetch_qualifying_results
+from etl.fetch_weather import fetch_race_weather
 
-# Fetch full 2023 season race results
+# Fetch 2023 season
 races = fetch_race_results(2023)
+quali  = fetch_qualifying_results(2023)
 
-# Fetch full 2023 season qualifying results
-quali = fetch_qualifying_results(2023)
-
-print(races.head())
-print(quali.head())
+# Fetch weather for a specific race location and date
+weather = fetch_race_weather(lat=51.5, lon=-1.7, date="2023-07-09")
 ```
 
 ---
@@ -68,22 +93,9 @@ print(quali.head())
 ## Data Sources
 
 | Source | Description |
-|---|---|
-| [FastF1](https://docs.fastf1.dev/) | Official F1 timing & telemetry data |
-| [Open-Meteo](https://open-meteo.com/) | Historical weather for race locations |
-
----
-
-## Roadmap
-
-- [x] Race results ETL
-- [x] Qualifying results ETL
-- [ ] Weather data ETL
-- [ ] Database schema & persistence layer
-- [ ] Exploratory data analysis (EDA)
-- [ ] Feature engineering
-- [ ] Baseline ML models (race position prediction)
-- [ ] Model evaluation & tuning
+|--------|-------------|
+| [FastF1](https://docs.fastf1.dev/) | Official F1 timing, telemetry & session results |
+| [Open-Meteo](https://open-meteo.com/) | Historical race-day weather (free, no API key) |
 
 ---
 
